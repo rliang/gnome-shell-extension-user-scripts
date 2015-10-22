@@ -116,6 +116,12 @@ function scriptIsLocal(sname) {
   return !isAbsoluteUri(scriptNameToUri(sname));
 }
 
+function scriptIsDepended(dname) {
+  for (let sname in Scripts)
+    if (dname in Scripts[sname].depends) return true;
+  return false;
+}
+
 function scriptResolveDependencyUri(sname, uri) {
   return isAbsoluteUri(uri) || scriptIsLocal(sname) ? uri :
     uriResolveNeighbor(scriptNameToUri(sname), uri) + '.js';
@@ -142,6 +148,7 @@ function loadScripts(path) {
   let scripts = loadDirectoryScripts(path);
   for (let sname in scripts) {
     if (Scripts[sname]) continue;
+    if (!scriptIsLocal(sname) && !scriptIsDepended(sname)) continue;
     Scripts[sname] = {stateObj: {}};
     try {
       Scripts[sname].stateObj = scripts[sname];
