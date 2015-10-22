@@ -1,0 +1,10 @@
+{
+    "name": "User Scripts",
+    "uuid": "user-scripts@rliang.github.com",
+    "description": "Load scripts from user directory.",
+    "shell-version": [
+        "3.14",
+        "3.16",
+        "3.18"
+    ]
+}
