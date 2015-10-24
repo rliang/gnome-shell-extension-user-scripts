@@ -224,11 +224,12 @@ function loadLocal() {
 }
 
 // loads remote scripts until no more pending dependencies
-function loadRemote(cb) {
+function loadRemote(cb, first) {
   loadScripts(RemoteDir.get_path());
   let queue = buildDownloadQueue();
   let uris = Object.keys(queue);
   if (!uris.length) {
+    if (!first) notify('Finished retrieving dependencies.');
     cb();
     return;
   }
@@ -274,7 +275,7 @@ function disableScripts() {
 function enable() {
   Scripts = {};
   loadLocal();
-  loadRemote(enableScripts);
+  loadRemote(enableScripts, true);
 }
 
 function disable() {
