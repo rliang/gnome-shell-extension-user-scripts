@@ -117,8 +117,10 @@ function scriptIsLocal(sname) {
 }
 
 function scriptIsDepended(dname) {
-  for (let sname in Scripts)
-    if (dname in Scripts[sname].depends) return true;
+  for (let sname in Scripts) {
+    let {depends} = Scripts[sname];
+    if (depends && dname in depends) return true;
+  }
   return false;
 }
 
@@ -156,6 +158,7 @@ function loadScripts(path) {
       notifyError(e, format('Error loading script {}.', sname));
     }
   }
+  loadScriptDependencies();
 }
 
 // constructs a map {sname: [dname]}
@@ -223,7 +226,6 @@ function loadLocal() {
 // loads remote scripts until no more pending dependencies
 function loadRemote(cb) {
   loadScripts(RemoteDir.get_path());
-  loadScriptDependencies();
   let queue = buildDownloadQueue();
   let uris = Object.keys(queue);
   if (!uris.length) {
