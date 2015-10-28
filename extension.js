@@ -84,13 +84,20 @@ function format(str, ...args) {
   return str;
 }
 
-function notify(msg) {
-  Main.notify('User Scripts', msg);
+function errorWhen(e, msg, ...args) {
+  if (msg)
+    e.name = format('{} when {}', (e.name || 'Error'),
+                    format.apply(null, [msg].concat(args)));
+  return e;
 }
 
-function notifyError(e, msg) {
-  Main.notifyError('User Scripts',
-                   format('{}\n{}: {}\n{}', msg, e.name, e.message, e.stack));
+function notify() {
+  Main.notify(format.apply(null, arguments));
+}
+
+function notifyError(e) {
+  e = errorWhen.apply(null, arguments);
+  Main.notifyError(e.name, format('{}: \n{}', e.message, e.stack));
 }
 
 // where to store scripts for a given base path
@@ -155,7 +162,7 @@ function loadScripts(path) {
     try {
       Scripts[sname].stateObj = scripts[sname];
     } catch (e) {
-      notifyError(e, format('Error loading script {}.', sname));
+      notifyError(e, 'loading script {}', sname);
     }
   }
   loadScriptDependencies();
@@ -190,10 +197,10 @@ function download(dir, uri, fname, cb, err) {
   fileLoad(Gio.file_new_for_uri(uri), (data) => {
     let file = dir.get_child(fname);
     fileWrite(file, data, cb, (e) => {
-      err(e, format('Failed to write to file {}.', file.get_path()));
+      err(errorWhen(e, 'writing to file {}', file.get_path()));
     });
   }, (e) => {
-    err(e, format('Failed to retrieve {}.', uri));
+    err(errorWhen(e, 'retrieving {}', uri));
   });
 }
 
@@ -202,8 +209,7 @@ function downloadAll(dir, map, cb, err) {
   try {
     fileEnsureDir(dir);
   } catch (e) {
-    err(e, format('Failed to ensure {} is a writable directory.',
-                  dir.get_path()));
+    err(errorWhen(e, 'ensuring {} is a writable directory', dir.get_path()));
     return;
   }
   let done = 0;
@@ -212,8 +218,8 @@ function downloadAll(dir, map, cb, err) {
     download(dir, uri, fname, () => {
       if (++done !== Object.keys(map).length) return;
       cb();
-    }, (e, msg) => {
-      err(e, msg);
+    }, (...args) => {
+      err.apply(null, args);
       err = function() {};
     });
   }
@@ -234,8 +240,7 @@ function loadRemote(cb, first) {
     return;
   }
   notify(format('Retrieving dependencies:\n{}', uris.join('\n')));
-  downloadAll(RemoteDir, queue, () => loadRemote(cb), (e, msg) =>
-    notifyError(e, format('Error retrieving dependencies: {}', msg)));
+  downloadAll(RemoteDir, queue, () => loadRemote(cb), notifyError);
 }
 
 // enables scripts in dependency order, passing depends to init()
@@ -250,12 +255,12 @@ function enableScripts() {
     try {
       if (isFunction(stateObj.init)) stateObj.init(depObjs);
     } catch (e) {
-      notifyError(e, format('Error initializing script {}.', sname));
+      notifyError(e, 'initializing script {}', sname);
     }
     try {
       if (isFunction(stateObj.enable)) stateObj.enable();
     } catch (e) {
-      notifyError(e, format('Error enabling script {}.', sname));
+      notifyError(e, 'enabling script {}', sname);
     }
   }
 }
@@ -267,7 +272,7 @@ function disableScripts() {
     try {
       if (isFunction(stateObj.disable)) stateObj.disable();
     } catch (e) {
-      notifyError(e, format('Error disabling script {}.', sname));
+      notifyError(e, 'disabling script {}', sname);
     }
   }
 }
